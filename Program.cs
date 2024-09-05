@@ -1,118 +1,158 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using System.Collections.Generic;
 using System.Data.SqlClient;
+using System;
+
 
 class Program
 {
     // Connection string to the database
     static string connectionString = @"Data Source=DESKTOP-6RT5AA5;Initial Catalog=SecureVault;Integrated Security=True;Encrypt=False";
-
+    static string title;
+    // Main entry point of the application
     static void Main(string[] args)
     {
-        // Set the console text color to Dark Cyan
-        Console.ForegroundColor = ConsoleColor.DarkCyan;
-        Console.WriteLine(@".·:''''''''''''''''''''''''''''''''''''''''''''''''''''''''':·.
+        Console.ForegroundColor = ConsoleColor.DarkCyan; // Set console text color
+        DisplayTitle(); // Display the application title
+
+        Login(); // Start the login process
+    }
+
+    // Displays the application title in the center of the console window
+    static void DisplayTitle()
+    {
+        Console.Clear(); // Clear the console
+       title = @".·:''''''''''''''''''''''''''''''''''''''''''''''''''''''''':·.
 : :  ____                         __     __          _ _    : :
 : : / ___|  ___  ___ _   _ _ __ __\ \   / /_ _ _   _| | |_  : :
 : : \___ \ / _ \/ __| | | | '__/ _ \ \ / / _` | | | | | __| : :
 : :  ___) |  __/ (__| |_| | | |  __/\ V / (_| | |_| | | |_  : :
 : : |____/ \___|\___|\__,_|_|  \___| \_/ \__,_|\__,_|_|\__| : :
-'·:.........................................................:·'");
+'·:.........................................................:·'";
 
-        // Call the Login method to authenticate the user
-        Login();
+        int consoleWidth = Console.WindowWidth; // Get console width
+        string[] lines = title.Split(new[] { Environment.NewLine }, StringSplitOptions.None); // Split title into lines
+
+        // Center each line and print it
+        foreach (string line in lines)
+        {
+            int padding = (consoleWidth - line.Length) / 2; // Calculate padding for centering
+            Console.WriteLine(new string(' ', padding) + line); // Print centered line
+        }
     }
 
-    // Method to handle user login
+    // Handles user login process
     static void Login()
     {
-        try
+        bool isLoggedIn = false; // Flag to indicate if login is successful
+
+        while (!isLoggedIn)
         {
-            Console.Write("\nEnter your User ID: ");
-            if (!int.TryParse(Console.ReadLine(), out int userId) || userId <= 0)
+            try
             {
-                Console.WriteLine("Invalid User ID. It must be a positive integer.");
-                return;
-            }
-
-            Console.Write("Enter your PIN: ");
-            string enteredPIN = Console.ReadLine();
-            Console.Clear();
-
-            if (string.IsNullOrWhiteSpace(enteredPIN))
-            {
-                Console.WriteLine("PIN cannot be empty or whitespace.");
-                return;
-            }
-
-            using (var connection = new SqlConnection(connectionString))
-            {
-                connection.Open();
-                SqlCommand command = new SqlCommand("SELECT UserID, UserName FROM Users WHERE UserID = @UserID AND EncryptedPIN = @PIN", connection);
-                command.Parameters.AddWithValue("@UserID", userId);
-                command.Parameters.AddWithValue("@PIN", enteredPIN);
-
-                using (SqlDataReader reader = command.ExecuteReader())
+                Console.Write("\nEnter your User ID: ");
+                if (!int.TryParse(Console.ReadLine(), out int userId) || userId <= 0)
                 {
-                    if (reader.Read())
+                    Console.WriteLine("Invalid User ID. It must be a positive integer.");
+                    continue; // Prompt for login again
+                }
+
+                Console.Write("Enter your PIN: ");
+                string enteredPIN = Console.ReadLine(); // Read user PIN
+                Console.Clear(); // Clear the console
+                Console.WriteLine(title);
+
+                // Check if PIN is not empty
+                if (string.IsNullOrWhiteSpace(enteredPIN))
+                {
+                    Console.WriteLine("PIN cannot be empty or whitespace.");
+                    continue; // Prompt for login again
+                }
+
+                // Connect to database and validate user credentials
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    connection.Open(); // Open database connection
+                    SqlCommand command = new SqlCommand("SELECT UserID, UserName FROM Users WHERE UserID = @UserID AND EncryptedPIN = @PIN", connection);
+                    command.Parameters.AddWithValue("@UserID", userId);
+                    command.Parameters.AddWithValue("@PIN", enteredPIN);
+
+                    using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        string userName = reader.GetString(1);
-                        Console.WriteLine($"\nWelcome, {userName}!\n");
-                        ShowMenu(userId);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Invalid User ID or PIN. Access Denied.");
+                        if (reader.Read()) // Check if user exists
+                        {
+                            string userName = reader.GetString(1);
+                            Console.WriteLine($"\nWelcome, {userName}!\n");
+                            isLoggedIn = true; // Set flag to true to exit loop
+                            ShowMenu(userId); // Show main menu
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid User ID or PIN. Please try again.");
+                        }
                     }
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An error occurred during login: {ex.Message}");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred during login: {ex.Message}");
+            }
         }
     }
 
+
+    // Displays the main menu and handles user choices
     static void ShowMenu(int userId)
     {
         bool exit = false;
         while (!exit)
         {
+            // Display menu options
             Console.WriteLine("1. Deposit Money");
             Console.WriteLine("2. Withdraw Money");
             Console.WriteLine("3. View Balance");
             Console.WriteLine("4. View Past Transactions");
             Console.WriteLine("5. Exit");
 
-            string choice = Console.ReadLine();
-            Console.Clear();
-            Console.WriteLine("\n" + "WHICH ACCOUNT YOU WANT TO USE? ");
+            string choice = Console.ReadLine(); // Read user choice
+            Console.Clear(); // Clear the console
+            Console.WriteLine(title);
 
-            switch (choice)
+            try
             {
-                case "1":
-                    DepositMoney(userId);
-                    break;
-                case "2":
-                    WithdrawMoney(userId);
-                    break;
-                case "3":
-                    ViewBalance(userId);
-                    break;
-                case "4":
-                    ViewPastTransactions(userId);
-                    break;
-                case "5":
-                    exit = true;
-                    break;
-                default:
-                    Console.WriteLine("Invalid choice. Please select a valid option.");
-                    break;
+                // Handle user choice
+                switch (choice)
+                {
+                    case "1":
+                        DepositMoney(userId); // Call method to deposit money
+                        break;
+                    case "2":
+                        WithdrawMoney(userId); // Call method to withdraw money
+                        break;
+                    case "3":
+                        ViewBalance(userId); // Call method to view balance
+                        break;
+                    case "4":
+                        ViewPastTransactions(userId); // Call method to view past transactions
+                        break;
+                    case "5":
+                        Login();
+                        //exit = true; // Exit the menu loop
+                        break;
+                    default:
+                        Console.WriteLine("\nInvalid choice. Please select a valid option.");
+                        break;
+                }
+            }
+            catch
+            {
+                Console.WriteLine("Please enter a valid input");
+                Console.Clear();
+                ShowMenu(userId);
             }
         }
     }
 
+    // Allows the user to select an account and retrieves its balance
     static int SelectAccount(int userId, out decimal balance)
     {
         balance = 0;
@@ -120,9 +160,7 @@ class Program
 
         using (SqlConnection connection = new SqlConnection(connectionString))
         {
-            connection.Open();
-
-            // Retrieve and display all accounts
+            connection.Open(); // Open database connection
             string query = "SELECT AccountID, AccountType, AccountNumber FROM Accounts WHERE UserID = @UserID";
             using (SqlCommand command = new SqlCommand(query, connection))
             {
@@ -131,11 +169,12 @@ class Program
                 {
                     if (!reader.HasRows)
                     {
-                        Console.WriteLine("***************No accounts found.***************");
+                        Console.WriteLine("\nNo accounts found.");
                         return -1;
                     }
 
-                    Console.WriteLine("__________________________________________________________________\n");
+                    // Display available accounts
+                    Console.WriteLine("\nAvailable Accounts:");
                     while (reader.Read())
                     {
                         int accountId = reader.GetInt32(0);
@@ -144,21 +183,21 @@ class Program
                         accountIds.Add(accountId);
                         Console.WriteLine($"AccountID: {accountId}, AccountType: {accountType}, AccountNumber: {accountNumber}");
                     }
-                    Console.WriteLine("__________________________________________________________________");
                 }
             }
 
+            // Prompt user to select an account
             while (true)
             {
-                // Prompt user for AccountID
                 Console.Write("\nEnter AccountID: ");
+           
                 if (!int.TryParse(Console.ReadLine(), out int selectedAccountId) || !accountIds.Contains(selectedAccountId))
                 {
-                    Console.WriteLine("***************Invalid AccountID. Please enter a valid AccountID from the list.***************");
-                    continue; // Ask for AccountID again
+                    Console.WriteLine("\nInvalid AccountID. Please enter a valid AccountID from the list.");
+                    continue;
                 }
 
-                // Verify AccountID
+                // Retrieve the balance of the selected account
                 query = "SELECT AccountID, Balance FROM Accounts WHERE AccountID = @AccountID";
                 using (SqlCommand cmd = new SqlCommand(query, connection))
                 {
@@ -168,11 +207,11 @@ class Program
                         if (rdr.Read())
                         {
                             balance = rdr.GetDecimal(1);
-                            return rdr.GetInt32(0); // Return the valid AccountID
+                            return rdr.GetInt32(0);
                         }
                         else
                         {
-                            Console.WriteLine("***************Invalid AccountID. Please try again.***************");
+                            Console.WriteLine("\nInvalid AccountID. Please try again.");
                         }
                     }
                 }
@@ -180,37 +219,31 @@ class Program
         }
     }
 
+    // Handles depositing money into a selected account
     static void DepositMoney(int userId)
     {
         try
         {
             int accountId = SelectAccount(userId, out decimal balance);
-            if (accountId == -1) return;
+            if (accountId == -1) return; // Exit if no valid account selected
 
-            Console.Write("Enter account number: ");
-            string accountNumber = Console.ReadLine();
-            Console.Clear();
+            Console.Write("Enter amount to deposit: ");
+         
+            decimal amount = PromptForPositiveAmount(); // Get the deposit amount
 
-            if (string.IsNullOrWhiteSpace(accountNumber))
-            {
-                Console.WriteLine("Account number cannot be empty or whitespace.");
-                return;
-            }
-
-            decimal amount = PromptForPositiveAmount("Enter amount to deposit: ");
-
+            // Update account balance and log the transaction
             using (var connection = new SqlConnection(connectionString))
             {
-                connection.Open();
-                SqlCommand command = new SqlCommand("UPDATE Accounts SET Balance = Balance + @Amount OUTPUT INSERTED.Balance WHERE UserID = @UserID AND AccountNumber = @AccountNumber", connection);
+                connection.Open(); // Open database connection
+                SqlCommand command = new SqlCommand("UPDATE Accounts SET Balance = Balance + @Amount OUTPUT INSERTED.Balance WHERE UserID = @UserID AND AccountID = @AccountID", connection);
                 command.Parameters.AddWithValue("@Amount", amount);
                 command.Parameters.AddWithValue("@UserID", userId);
-                command.Parameters.AddWithValue("@AccountNumber", accountNumber);
+                command.Parameters.AddWithValue("@AccountID", accountId);
 
-                decimal newBalance = (decimal)command.ExecuteScalar();
-                Console.WriteLine($"***********Deposit successful. New balance: R {newBalance}***********");
+                decimal newBalance = (decimal)command.ExecuteScalar(); // Execute command and get new balance
+                Console.WriteLine($"\nDeposit successful. New balance: R {newBalance} \n");
 
-                LogTransaction(connection, accountNumber, "Deposit", amount);
+                LogTransaction(connection, accountId, "Deposit", amount); // Log the deposit transaction
             }
         }
         catch (Exception ex)
@@ -219,49 +252,39 @@ class Program
         }
     }
 
+    // Handles withdrawing money from a selected account
     static void WithdrawMoney(int userId)
     {
         try
         {
             int accountId = SelectAccount(userId, out decimal balance);
-            if (accountId == -1) return;
+            if (accountId == -1) return; // Exit if no valid account selected
 
-            Console.Write("Enter account number: ");
-            string accountNumber = Console.ReadLine();
+            Console.Write("Enter amount to withdraw: ");
+            Console.Clear();
+            Console.WriteLine(title);
+            decimal amount = PromptForPositiveAmount(); // Get the withdrawal amount
 
-            if (string.IsNullOrWhiteSpace(accountNumber))
+            // Check if there is sufficient balance
+            if (balance < amount)
             {
-                Console.WriteLine("Account number cannot be empty or whitespace.");
+                Console.WriteLine("\n Oopsie, you have Insufficient balance.\n");
                 return;
             }
 
-            decimal amount = PromptForPositiveAmount("Enter amount to withdraw: ");
-
+            // Update account balance and log the transaction
             using (var connection = new SqlConnection(connectionString))
             {
-                connection.Open();
+                connection.Open(); // Open database connection
+                SqlCommand command = new SqlCommand("UPDATE Accounts SET Balance = Balance - @Amount OUTPUT INSERTED.Balance WHERE UserID = @UserID AND AccountID = @AccountID", connection);
+                command.Parameters.AddWithValue("@Amount", amount);
+                command.Parameters.AddWithValue("@UserID", userId);
+                command.Parameters.AddWithValue("@AccountID", accountId);
 
-                SqlCommand checkBalanceCommand = new SqlCommand("SELECT Balance FROM Accounts WHERE UserID = @UserID AND AccountNumber = @AccountNumber", connection);
-                checkBalanceCommand.Parameters.AddWithValue("@UserID", userId);
-                checkBalanceCommand.Parameters.AddWithValue("@AccountNumber", accountNumber);
+                decimal newBalance = (decimal)command.ExecuteScalar(); // Execute command and get new balance
+                Console.WriteLine($"\nWithdrawal successful. New balance: R {newBalance}\n");
 
-                decimal currentBalance = (decimal)checkBalanceCommand.ExecuteScalar();
-                if (currentBalance >= amount)
-                {
-                    SqlCommand command = new SqlCommand("UPDATE Accounts SET Balance = Balance - @Amount OUTPUT INSERTED.Balance WHERE UserID = @UserID AND AccountNumber = @AccountNumber", connection);
-                    command.Parameters.AddWithValue("@Amount", amount);
-                    command.Parameters.AddWithValue("@UserID", userId);
-                    command.Parameters.AddWithValue("@AccountNumber", accountNumber);
-
-                    decimal newBalance = (decimal)command.ExecuteScalar();
-                    Console.WriteLine($"***********Withdrawal successful. New balance: R {newBalance}***********");
-
-                    LogTransaction(connection, accountNumber, "Withdrawal", amount);
-                }
-                else
-                {
-                    Console.WriteLine("***************Insufficient balance.***************");
-                }
+                LogTransaction(connection, accountId, "Withdrawal", amount); // Log the withdrawal transaction
             }
         }
         catch (Exception ex)
@@ -270,133 +293,89 @@ class Program
         }
     }
 
-    static decimal PromptForPositiveAmount(string prompt)
+    // Prompts the user to enter a positive amount and validates the input
+    static decimal PromptForPositiveAmount()
     {
         decimal amount;
         while (true)
         {
-            Console.Write(prompt);
             if (decimal.TryParse(Console.ReadLine(), out amount) && amount > 0)
             {
-                break;
+                return amount; // Return valid amount
             }
-            Console.WriteLine("Invalid amount. It must be a positive number. Please try again.");
+            Console.WriteLine("\nInvalid amount. It must be a positive number. Please try again.\n");
         }
-        return amount;
     }
 
+    // Displays the current balance of a selected account
     static void ViewBalance(int userId)
     {
         try
         {
             int accountId = SelectAccount(userId, out decimal balance);
-            if (accountId == -1) return;
+            if (accountId == -1) return; // Exit if no valid account selected
 
-            Console.Write("Enter account number: ");
-            string accountNumber = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(accountNumber))
-            {
-                Console.WriteLine("Account number cannot be empty or whitespace.");
-                return;
-            }
-
-            using (var connection = new SqlConnection(connectionString))
-            {
-                connection.Open();
-                SqlCommand command = new SqlCommand("SELECT Balance FROM Accounts WHERE UserID = @UserID AND AccountNumber = @AccountNumber", connection);
-                command.Parameters.AddWithValue("@UserID", userId);
-                command.Parameters.AddWithValue("@AccountNumber", accountNumber);
-
-                object result = command.ExecuteScalar();
-                if (result != null)
-                {
-                    balance = (decimal)result;
-                    Console.WriteLine($"***************Current balance: R {balance}***************");
-                }
-                else
-                {
-                    Console.WriteLine("***************Invalid account number. Please try again.***************");
-                }
-            }
+            Console.WriteLine($"\nCurrent balance: R {balance}\n");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An error occurred while viewing balance: {ex.Message}");
+            Console.WriteLine($"\nAn error occurred while viewing balance: {ex.Message}");
         }
     }
 
+    // Displays past transactions for a selected account
     static void ViewPastTransactions(int userId)
     {
         try
         {
             int accountId = SelectAccount(userId, out decimal balance);
-            if (accountId == -1) return;
-
-            Console.Write("Enter account number: ");
-            string accountNumber = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(accountNumber))
-            {
-                Console.WriteLine("Account number cannot be empty or whitespace.");
-                return;
-            }
+            if (accountId == -1) return; // Exit if no valid account selected
 
             using (var connection = new SqlConnection(connectionString))
             {
-                connection.Open();
-                SqlCommand command = new SqlCommand("SELECT TransactionType, Amount, TransactionDateTime FROM Transactions t JOIN Accounts a ON t.AccountID = a.AccountID WHERE a.UserID = @UserID AND a.AccountNumber = @AccountNumber ORDER BY TransactionDateTime DESC", connection);
-                command.Parameters.AddWithValue("@UserID", userId);
-                command.Parameters.AddWithValue("@AccountNumber", accountNumber);
+                connection.Open(); // Open database connection
+                SqlCommand command = new SqlCommand("SELECT TransactionType, Amount, TransactionDateTime FROM Transactions WHERE AccountID = @AccountID ORDER BY TransactionDateTime DESC", connection);
+                command.Parameters.AddWithValue("@AccountID", accountId);
 
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
                     if (reader.HasRows)
                     {
+                        // Display past transactions
                         while (reader.Read())
                         {
                             string transactionType = reader.GetString(0);
                             decimal amount = reader.GetDecimal(1);
                             DateTime dateTime = reader.GetDateTime(2);
 
-                            Console.WriteLine($"{dateTime}: {transactionType} - {amount:C}");
+                            Console.WriteLine($"\n{dateTime}: {transactionType} - {amount:C}\n");
                         }
                     }
                     else
                     {
-                        Console.WriteLine("***************No past transactions found for this account.***************");
+                        Console.WriteLine("\nNo past transactions found for this account.");
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An error occurred while viewing past transactions: {ex.Message}");
+            Console.WriteLine($"\nAn error occurred while viewing past transactions: {ex.Message}");
         }
     }
 
-    static void LogTransaction(SqlConnection connection, string accountNumber, string transactionType, decimal amount)
+    // Logs a transaction into the database
+    static void LogTransaction(SqlConnection connection, int accountId, string transactionType, decimal amount)
     {
         try
         {
-            SqlCommand accountCommand = new SqlCommand("SELECT AccountID FROM Accounts WHERE AccountNumber = @AccountNumber", connection);
-            accountCommand.Parameters.AddWithValue("@AccountNumber", accountNumber);
+            SqlCommand command = new SqlCommand("INSERT INTO Transactions (AccountID, TransactionType, Amount, TransactionDateTime) VALUES (@AccountID, @TransactionType, @Amount, @TransactionDateTime)", connection);
+            command.Parameters.AddWithValue("@AccountID", accountId);
+            command.Parameters.AddWithValue("@TransactionType", transactionType);
+            command.Parameters.AddWithValue("@Amount", amount);
+            command.Parameters.AddWithValue("@TransactionDateTime", DateTime.Now);
 
-            object result = accountCommand.ExecuteScalar();
-            if (result != null)
-            {
-                int accountId = (int)result;
-
-                SqlCommand command = new SqlCommand("INSERT INTO Transactions (AccountID, TransactionType, Amount, TransactionDateTime) VALUES (@AccountID, @TransactionType, @Amount, @TransactionDateTime)", connection);
-                command.Parameters.AddWithValue("@AccountID", accountId);
-                command.Parameters.AddWithValue("@TransactionType", transactionType);
-                command.Parameters.AddWithValue("@Amount", amount);
-                command.Parameters.AddWithValue("@TransactionDateTime", DateTime.Now);
-
-                command.ExecuteNonQuery();
-            }
-            else
-            {
-                Console.WriteLine("***************Account not found while logging transaction.***************");
-            }
+            command.ExecuteNonQuery(); // Execute the command to log the transaction
         }
         catch (Exception ex)
         {
