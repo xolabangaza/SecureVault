@@ -5,19 +5,24 @@ using System.Text;
 
 class Program
 {
+    // Database connection string
     static string connectionString = @"Data Source=DESKTOP-6RT5AA5;Initial Catalog=SecureVault;Integrated Security=True;Encrypt=False";
     static string title;
 
     static void Main(string[] args)
     {
+        // Set console text color
         Console.ForegroundColor = ConsoleColor.DarkCyan;
+
+        // Display the app title and login screen
         DisplayTitle();
         Login();
     }
 
+    // Method to display the application title with centered formatting
     static void DisplayTitle()
     {
-        Console.Clear();
+        Console.Clear(); // Clear the console before displaying title
         title = @".·:''''''''''''''''''''''''''''''''''''''''''''''''''''''''':·.
 : :  ____                         __     __          _ _    : :
 : : / ___|  ___  ___ _   _ _ __ __\ \   / /_ _ _   _| | |_  : :
@@ -26,6 +31,7 @@ class Program
 : : |____/ \___|\___|\__,_|_|  \___| \_/ \__,_|\__,_|_|\__| : :
 '·:.........................................................:·'";
 
+        // Center the title text based on the console window width
         int consoleWidth = Console.WindowWidth;
         string[] lines = title.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
 
@@ -36,6 +42,7 @@ class Program
         }
     }
 
+    // Method to handle user login
     static void Login()
     {
         bool isLoggedIn = false;
@@ -44,13 +51,16 @@ class Program
         {
             try
             {
+                // Prompt for User ID
                 Console.Write("\nEnter your User ID: ");
                 if (!int.TryParse(Console.ReadLine(), out int userId) || userId <= 0)
                 {
+                    // Validate that User ID is a positive integer
                     Console.WriteLine("Invalid User ID. It must be a positive integer.");
                     continue;
                 }
 
+                // Prompt for PIN and mask the input
                 Console.Write("Enter your PIN: ");
                 string enteredPIN = ReadPIN();
                 Console.Clear();
@@ -58,28 +68,34 @@ class Program
 
                 if (string.IsNullOrWhiteSpace(enteredPIN))
                 {
+                    // Ensure the PIN is not empty or whitespace
                     Console.WriteLine("PIN cannot be empty or whitespace.");
                     continue;
                 }
 
+                // Open the database connection
                 using (var connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
+                    // Prepare SQL query to check User ID and PIN
                     SqlCommand command = new SqlCommand("SELECT UserID, UserName FROM Users WHERE UserID = @UserID AND EncryptedPIN = @PIN", connection);
                     command.Parameters.AddWithValue("@UserID", userId);
-                    command.Parameters.AddWithValue("@PIN", enteredPIN); // No hashing
+                    command.Parameters.AddWithValue("@PIN", enteredPIN); // PIN is not hashed in this version
 
+                    // Execute the query and check if user exists
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
                         if (reader.Read())
                         {
+                            // Successful login
                             string userName = reader.GetString(1);
                             Console.WriteLine($"\nWelcome, {userName}!\n");
                             isLoggedIn = true;
-                            ShowMenu(userId);
+                            ShowMenu(userId); // Show the main menu after login
                         }
                         else
                         {
+                            // Invalid login
                             Console.WriteLine("Invalid User ID or PIN. Please try again.");
                         }
                     }
@@ -87,16 +103,19 @@ class Program
             }
             catch (Exception ex)
             {
+                // Handle any errors during login
                 Console.WriteLine($"An error occurred during login: {ex.Message}");
             }
         }
     }
 
+    // Method to display the main menu options
     static void ShowMenu(int userId)
     {
         bool exit = false;
         while (!exit)
         {
+            // Display available menu options
             Console.WriteLine("1. Deposit Money");
             Console.WriteLine("2. Withdraw Money");
             Console.WriteLine("3. View Balance");
@@ -104,10 +123,12 @@ class Program
             Console.WriteLine("5. Exit");
             Console.Write("Select from the above menu: ");
 
+            // Get the user's choice
             string choice = Console.ReadLine();
             Console.Clear();
             Console.WriteLine(title);
 
+            // Execute the selected option
             switch (choice)
             {
                 case "1":
@@ -123,20 +144,23 @@ class Program
                     ViewPastTransactions(userId);
                     break;
                 case "5":
-                    Login();
+                    Login(); // Restart the login process on exit
                     break;
                 default:
+                    // Handle invalid menu choices
                     Console.WriteLine("\nInvalid choice. Please select a valid option.");
                     break;
             }
         }
     }
 
+    // Method to read PIN input from the user while masking it with asterisks
     static string ReadPIN()
     {
         StringBuilder pin = new StringBuilder();
         ConsoleKey key;
 
+        // Loop to read each character of the PIN
         do
         {
             var keyInfo = Console.ReadKey(intercept: true);
@@ -144,22 +168,24 @@ class Program
 
             if (key == ConsoleKey.Backspace && pin.Length > 0)
             {
+                // Handle backspace, remove the last character and asterisk
                 pin.Remove(pin.Length - 1, 1);
-                Console.Write("\b \b"); // Remove last asterisk
+                Console.Write("\b \b");
             }
             else if (!char.IsControl(keyInfo.KeyChar))
             {
+                // Append the character to the PIN and display an asterisk
                 pin.Append(keyInfo.KeyChar);
                 Console.Write("*");
             }
-        } while (key != ConsoleKey.Enter);
+        } while (key != ConsoleKey.Enter); // Continue until Enter is pressed
 
         Console.WriteLine();
-        return pin.ToString();
+        return pin.ToString(); // Return the entered PIN
     }
 
-    // Allows the user to select an account and retrieves its balance
-    static int SelectAccount(int userId, out decimal balance)
+// Allows the user to select an account and retrieves its balance
+static int SelectAccount(int userId, out decimal balance)
     {
         balance = 0;
         List<int> accountIds = new List<int>();
