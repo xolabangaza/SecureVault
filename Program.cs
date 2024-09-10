@@ -1,27 +1,24 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
-using System;
-
+using System.Text;
 
 class Program
 {
-    // Connection string to the database
     static string connectionString = @"Data Source=DESKTOP-6RT5AA5;Initial Catalog=SecureVault;Integrated Security=True;Encrypt=False";
     static string title;
-    // Main entry point of the application
+
     static void Main(string[] args)
     {
-        Console.ForegroundColor = ConsoleColor.DarkCyan; // Set console text color
-        DisplayTitle(); // Display the application title
-
-        Login(); // Start the login process
+        Console.ForegroundColor = ConsoleColor.DarkCyan;
+        DisplayTitle();
+        Login();
     }
 
-    // Displays the application title in the center of the console window
     static void DisplayTitle()
     {
-        Console.Clear(); // Clear the console
-       title = @".·:''''''''''''''''''''''''''''''''''''''''''''''''''''''''':·.
+        Console.Clear();
+        title = @".·:''''''''''''''''''''''''''''''''''''''''''''''''''''''''':·.
 : :  ____                         __     __          _ _    : :
 : : / ___|  ___  ___ _   _ _ __ __\ \   / /_ _ _   _| | |_  : :
 : : \___ \ / _ \/ __| | | | '__/ _ \ \ / / _` | | | | | __| : :
@@ -29,21 +26,19 @@ class Program
 : : |____/ \___|\___|\__,_|_|  \___| \_/ \__,_|\__,_|_|\__| : :
 '·:.........................................................:·'";
 
-        int consoleWidth = Console.WindowWidth; // Get console width
-        string[] lines = title.Split(new[] { Environment.NewLine }, StringSplitOptions.None); // Split title into lines
+        int consoleWidth = Console.WindowWidth;
+        string[] lines = title.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
 
-        // Center each line and print it
         foreach (string line in lines)
         {
-            int padding = (consoleWidth - line.Length) / 2; // Calculate padding for centering
-            Console.WriteLine(new string(' ', padding) + line); // Print centered line
+            int padding = (consoleWidth - line.Length) / 2;
+            Console.WriteLine(new string(' ', padding) + line);
         }
     }
 
-    // Handles user login process
     static void Login()
     {
-        bool isLoggedIn = false; // Flag to indicate if login is successful
+        bool isLoggedIn = false;
 
         while (!isLoggedIn)
         {
@@ -53,37 +48,35 @@ class Program
                 if (!int.TryParse(Console.ReadLine(), out int userId) || userId <= 0)
                 {
                     Console.WriteLine("Invalid User ID. It must be a positive integer.");
-                    continue; // Prompt for login again
+                    continue;
                 }
 
                 Console.Write("Enter your PIN: ");
-                string enteredPIN = Console.ReadLine(); // Read user PIN
-                Console.Clear(); // Clear the console
+                string enteredPIN = ReadPIN();
+                Console.Clear();
                 Console.WriteLine(title);
 
-                // Check if PIN is not empty
                 if (string.IsNullOrWhiteSpace(enteredPIN))
                 {
                     Console.WriteLine("PIN cannot be empty or whitespace.");
-                    continue; // Prompt for login again
+                    continue;
                 }
 
-                // Connect to database and validate user credentials
                 using (var connection = new SqlConnection(connectionString))
                 {
-                    connection.Open(); // Open database connection
+                    connection.Open();
                     SqlCommand command = new SqlCommand("SELECT UserID, UserName FROM Users WHERE UserID = @UserID AND EncryptedPIN = @PIN", connection);
                     command.Parameters.AddWithValue("@UserID", userId);
-                    command.Parameters.AddWithValue("@PIN", enteredPIN);
+                    command.Parameters.AddWithValue("@PIN", enteredPIN); // No hashing
 
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        if (reader.Read()) // Check if user exists
+                        if (reader.Read())
                         {
                             string userName = reader.GetString(1);
                             Console.WriteLine($"\nWelcome, {userName}!\n");
-                            isLoggedIn = true; // Set flag to true to exit loop
-                            ShowMenu(userId); // Show main menu
+                            isLoggedIn = true;
+                            ShowMenu(userId);
                         }
                         else
                         {
@@ -99,14 +92,11 @@ class Program
         }
     }
 
-
-    // Displays the main menu and handles user choices
     static void ShowMenu(int userId)
     {
         bool exit = false;
         while (!exit)
         {
-            // Display menu options
             Console.WriteLine("1. Deposit Money");
             Console.WriteLine("2. Withdraw Money");
             Console.WriteLine("3. View Balance");
@@ -114,43 +104,58 @@ class Program
             Console.WriteLine("5. Exit");
             Console.Write("Select from the above menu: ");
 
-            string choice = Console.ReadLine(); // Read user choice
-            Console.Clear(); // Clear the console
+            string choice = Console.ReadLine();
+            Console.Clear();
             Console.WriteLine(title);
 
-            try
+            switch (choice)
             {
-                // Handle user choice
-                switch (choice)
-                {
-                    case "1":
-                        DepositMoney(userId); // Call method to deposit money
-                        break;
-                    case "2":
-                        WithdrawMoney(userId); // Call method to withdraw money
-                        break;
-                    case "3":
-                        ViewBalance(userId); // Call method to view balance
-                        break;
-                    case "4":
-                        ViewPastTransactions(userId); // Call method to view past transactions
-                        break;
-                    case "5":
-                        Login();
-                        //exit = true; // Exit the menu loop
-                        break;
-                    default:
-                        Console.WriteLine("\nInvalid choice. Please select a valid option.");
-                        break;
-                }
-            }
-            catch
-            {
-                Console.WriteLine("Please enter a valid input");
-                Console.Clear();
-                ShowMenu(userId);
+                case "1":
+                    DepositMoney(userId);
+                    break;
+                case "2":
+                    WithdrawMoney(userId);
+                    break;
+                case "3":
+                    ViewBalance(userId);
+                    break;
+                case "4":
+                    ViewPastTransactions(userId);
+                    break;
+                case "5":
+                    Login();
+                    break;
+                default:
+                    Console.WriteLine("\nInvalid choice. Please select a valid option.");
+                    break;
             }
         }
+    }
+
+    static string ReadPIN()
+    {
+        StringBuilder pin = new StringBuilder();
+        ConsoleKey key;
+
+        do
+        {
+            var keyInfo = Console.ReadKey(intercept: true);
+            key = keyInfo.Key;
+
+            if (key == ConsoleKey.Backspace && pin.Length > 0)
+            {
+                pin.Remove(pin.Length - 1, 1);
+                Console.Write("\b \b"); // Remove last asterisk
+            }
+            else if (!char.IsControl(keyInfo.KeyChar))
+            {
+                pin.Append(keyInfo.KeyChar);
+                Console.Write("*");
+            }
+        } while (key != ConsoleKey.Enter);
+
+        Console.WriteLine();
+        return pin.ToString();
     }
 
     // Allows the user to select an account and retrieves its balance
