@@ -112,6 +112,7 @@ class Program
             Console.WriteLine("3. View Balance");
             Console.WriteLine("4. View Past Transactions");
             Console.WriteLine("5. Exit");
+            Console.Write("Select from the above menu: ");
 
             string choice = Console.ReadLine(); // Read user choice
             Console.Clear(); // Clear the console
@@ -174,7 +175,7 @@ class Program
                     }
 
                     // Display available accounts
-                    Console.WriteLine("\nAvailable Accounts:");
+                    Console.WriteLine("\nAvailable Accounts:\n");
                     while (reader.Read())
                     {
                         int accountId = reader.GetInt32(0);
@@ -193,6 +194,7 @@ class Program
            
                 if (!int.TryParse(Console.ReadLine(), out int selectedAccountId) || !accountIds.Contains(selectedAccountId))
                 {
+
                     Console.WriteLine("\nInvalid AccountID. Please enter a valid AccountID from the list.");
                     continue;
                 }
@@ -261,14 +263,14 @@ class Program
             if (accountId == -1) return; // Exit if no valid account selected
 
             Console.Write("Enter amount to withdraw: ");
+            decimal amount = PromptForPositiveAmount(); // Get the withdrawal amount
             Console.Clear();
             Console.WriteLine(title);
-            decimal amount = PromptForPositiveAmount(); // Get the withdrawal amount
 
             // Check if there is sufficient balance
             if (balance < amount)
             {
-                Console.WriteLine("\n Oopsie, you have Insufficient balance.\n");
+                Console.WriteLine("\n Oopsie, you have Insufficient funds.\n");
                 return;
             }
 
